@@ -13,48 +13,93 @@
  * @preg Number of physical registers
  */
 typedef struct _preg{
-	int ready;
+	int busy;
 } pregEntry;
 
 typedef struct _robEntry{
+	int32_t busy;
 	int32_t areg;
 	int32_t prevPreg;
 	int32_t preg;
 } robEntry;
 
-class scheduler{
-public:
-	scheduler(){
-		dest_areg = 0;
-		dest_preg = 1;
-		src1_preg = 2;
-		src2_preg = 3;
-	}
+typedef struct _schedEntry{
+	int32_t busy;
 	int32_t dest_areg;
 	int32_t dest_preg;
 	int32_t src1_preg;
 	int32_t src2_preg;
+} schedEntry;
+
+class state_update {
+public:
+	state_update() {}
+	void init(uint64_t size){
+		robSize = size;
+		rob_ = (robEntry*) calloc(0,sizeof(robEntry) * size);
+		printf("rob created\n");
+	}
+	int update(robEntry* newEntry){
+		int preg_to_free = -1;
+		for(int i=robSize; i>0; i--){
+			if(i == robSize && (rob_[i].prevPreg != rob_[i].preg)){
+				preg_to_free = rob_[i].prevPreg;
+			}
+			rob_[i] = rob_[i-1];
+		}
+		rob_[0] = *newEntry;
+		return preg_to_free;
+	}
+	robEntry* rob_;
+private:
+	int robSize;
 };
 
-std::vector<robEntry> rob;
+class scheduler_ {
+public:
+	scheduler_() {}
+	void init(uint64_t size){
+		schedQ = (schedEntry*) calloc(0,sizeof(schedEntry) * size);
+		printf("scheduling queue created\n");
+	}
+	schedEntry* schedQ;
+private:
+};
 
-int rat[32];
+class physFile {
+public:
+	physFile() {}
+	void init(uint64_t size){
+		pregFile = (pregEntry*) calloc(0,sizeof(pregEntry) * size);
+		printf("preg file created\n");
+	}
+	pregEntry* pregFile;
+private:
+};
+
+//std::vector<robEntry> rob;
+state_update rob;
+const int numAregs = 32;
+int rat[numAregs];
 pregEntry* pregFile;
 //robEntry* rob;
 uint64_t numk0, numk1, numk2, numPreg, dispRate, robSize, schedSize;
 
-scheduler* sched;
+scheduler_ scheduler;
+physFile pregs;
 
 void setup_proc(uint64_t k0, uint64_t k1, uint64_t k2, uint64_t f, uint64_t rob_, uint64_t preg) 
 {
 	numk0 = k0; numk1 = k1; numk2 = k2; dispRate = f; robSize = rob_; numPreg = preg;
 	schedSize = 2*k0 + k1 + k2;
-	pregFile = (pregEntry*) calloc(0,sizeof(pregEntry) * numPreg);
+	//pregFile = (pregEntry*) calloc(0,sizeof(pregEntry) * numPreg);
 	///rob = (robEntry*) calloc(0,sizeof(robEntry) * robSize);
-	rob.reserve(robSize);
-	sched = (scheduler*) malloc(sizeof(scheduler) * schedSize);
+	//rob.reserve(robSize);
+	rob.init(robSize);
+	scheduler.init(schedSize);
+	pregs.init(numPreg);
 	//printf("%d",sizeof(scheduler));
-	printf("%d,%d\n",sched[0].dest_areg,sched[0].dest_preg);
+	//printf("%d,%d\n",sched[0].dest_areg,sched[0].dest_preg);
 }
 
 /**
@@ -65,10 +110,11 @@ void setup_proc(uint64_t k0, uint64_t k1, uint64_t k2, uint64_t f, uint64_t rob_
  * @p_stats Pointer to the statistics structure
  */
 proc_inst_t instruction;
-
+robEntry newentry;
 void run_proc(proc_stats_t* p_stats){
 
 	while(read_instruction(&instruction)){
+		rob.update(&newentry);
 		int32_t opcode = instruction.op_code;
 		if(opcode = -1){
 			opcode = 1;
