@@ -39,7 +39,17 @@ public:
 		rob_ = (robEntry*) calloc(0,sizeof(robEntry) * size);
 		printf("rob created\n");
 	}
-	int update(robEntry* newEntry){
+
+	void update(){
+		for(int i=robSize; i>0; i--){
+			if(rob_[i].busy == 0){
+
+			}
+			else break;
+		}
+	}
+
+	int addEntry(robEntry* newEntry){
 		int preg_to_free = -1;
 		for(int i=robSize; i>0; i--){
 			if(i == robSize && (rob_[i].prevPreg != rob_[i].preg)){
@@ -114,7 +124,7 @@ robEntry newentry;
 void run_proc(proc_stats_t* p_stats){
 
 	while(read_instruction(&instruction)){
-		rob.update(&newentry);
+		rob.addEntry(&newentry);
 		int32_t opcode = instruction.op_code;
 		if(opcode = -1){
 			opcode = 1;
