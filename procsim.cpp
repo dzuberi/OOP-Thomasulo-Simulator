@@ -1,5 +1,6 @@
 #include "procsim.hpp"
 #include <vector>
+#include "limits.h"
 /**
  * Subroutine for initializing the processor. You many add and initialize any global or heap
  * variables as needed.
@@ -37,6 +38,10 @@ public:
 		pregFile[index].occupied = 0;
 		pregFile[index].ready = 0;
 		numFree += 1;
+	}
+
+	void ready_preg(int32_t index){
+		pregFile[index].ready = 1;
 	}
 
 	void clear(){
@@ -79,7 +84,7 @@ public:
 		for(int i=robEnd; i>0; i--){
 			rob_[i] = rob_[i-1];
 		}
-		rob_[0].busy = 0;
+		rob_[0].busy = 1;
 		rob_[0].occupied = 0;
 		return preg_to_free;
 	}
@@ -94,16 +99,23 @@ public:
 			}
 		}
 		rob_[highestFree] = *newEntry;
-		rob_[highestFree] = {.occupied = 1, .busy = 1};
+		//rob_[highestFree] = {.occupied = 1, .busy = 1};
 		numFree -= 1;
+		//printf("rob entries: ");
+		//for(int j=0;j<(int)robSize;j++){
+		//	printf("%d/%d ",rob_[j].occupied,rob_[j].id);
+		//}
+		//printf("\n");
 	}
 	
 	void mark_complete(int id){
 		for(int i=0; i<(int)robSize; i++){
 			if(rob_[i].id == id){
 				rob_[i].busy = 0;
+				//printf("inst completed\n");
 			}
 		}
+		//printf("inst should have been completed\n");
 	}
 
 	void clear(){
@@ -144,21 +156,51 @@ public:
 		return false;
 	}
 
-	void complete_instructions(state_update& SU){
+	void complete_instructions(state_update& SU, physFile& preg){
 		for(int i=0; i<(int)schedSize; i++){
 			uint32_t num;
 			if((schedQ[i].occupied == 1) && (schedQ[i].marked_to_fire == 1)){
 				schedQ[i].occupied = 0;
 				schedQ[i].marked_to_fire = 0;
-				num = schedQ[i].id;
-				SU.mark_complete(num);
+				preg.ready_preg(schedQ[i].dest_preg);
+				SU.mark_complete(schedQ[i].id);
 				numFree += 1;
+				//printf("inst marked completed\n");
 			}
 		}
 	}
 
-	void mark_to_execute(){
-
+	void mark_to_execute(physFile& preg){
+		for(int unit=0; unit<3; unit++){
+			int unitsFilled = 0;
+			int notFilled = 0;
+			while((unitsFilled < k_avail[unit]) && (notFilled == 0)){
+				int lowID = INT_MAX;
+				int oldUnitsFilled = 0;
+				int index_to_ex = -1;
+				for(int i=0; i<(int)schedSize; i++){
+					if((schedQ[i].FU == unit) && (schedQ[i].occupied == 1) && (schedQ[i].marked_to_fire == 0)){
+						if(schedQ[i].id < lowID){
+							lowID = schedQ[i].id;
+							index_to_ex = i;
+						}
+					}
+					if(index_to_ex > -1){
+						schedQ[i].marked_to_fire = 1;
+						unitsFilled++;
+						//printf("inst marked to fire\n");
+					}
+					if(i == ((int)schedSize - 1)){
+						if(oldUnitsFilled == unitsFilled){
+							notFilled = 1;
+						}
+						else{
+							oldUnitsFilled = unitsFilled;
+						}
+					}
+				}
+			}
+		}
 	}
 
 	void clear(){
@@ -257,8 +299,8 @@ void dispatch(){
 	int i=0;
 	//printf("xd");
 	while((i < num_to_dispatch) && (notFinalInst = read_instruction(&instruction))){
-		//printf("%d ",SU.numFree);printf("%d ",scheduler.numFree);printf("%d\n",pregs.numFree);
-		//printf("%d\n",num_to_dispatch);
+		printf("%d ",SU.numFree);printf("%d ",scheduler.numFree);printf("%d\n",pregs.numFree);
+		printf("%d\n",num_to_dispatch);
 		//printf("%d",notFinalInst);
 		i++;
 		instNum++;
@@ -285,7 +327,7 @@ void dispatch(){
 	
 		SU.add_entry(&newrob);
 		scheduler.add_entry(&newsched);
-		//printf("%d\n",instNum);
+		printf("%d\n",instNum);
 	}
 
 }
@@ -293,9 +335,13 @@ void dispatch(){
 void run_proc(proc_stats_t* p_stats){
 	while((notFinalInst == 1) || (SU.numFree < (int)robSize)){
 		clock++;
+		//printf("1");
 		SU.update(pregs);
-		scheduler.complete_instructions(SU);
-		scheduler.mark_to_execute();
+		//printf("2");
+		scheduler.complete_instructions(SU, pregs);
+		//printf("3");
+		scheduler.mark_to_execute(pregs);
+		//printf("4");
 		dispatch();
 	}
 }
