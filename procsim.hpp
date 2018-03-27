@@ -39,4 +39,35 @@ void setup_proc(uint64_t k0, uint64_t k1, uint64_t k2, uint64_t f, uint64_t rob,
 void run_proc(proc_stats_t* p_stats);
 void complete_proc(proc_stats_t* p_stats);
 
+typedef struct _preg{
+	int ready;
+	int occupied;
+} pregEntry;
+
+typedef struct _robEntry{
+	int occupied;
+	int busy;
+	int32_t areg;
+	int32_t prevPreg;
+	int32_t preg;
+	int id;
+} robEntry;
+
+typedef struct _schedEntry{
+	int occupied;
+	int32_t marked_to_fire;
+	int id;
+	int32_t dest_areg;
+	int32_t dest_preg;
+	int32_t src1_preg;
+	int32_t src2_preg;
+	int32_t FU;
+} schedEntry;
+
+//typedef struct _function_unit{
+//	int32_t free;
+//	uint32_t instruction_address;
+//} function_unit;
+
+
 #endif /* PROCSIM_HPP */

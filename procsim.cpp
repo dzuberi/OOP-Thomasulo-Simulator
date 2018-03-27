@@ -12,27 +12,41 @@
  * @rob Number of ROB entries
  * @preg Number of physical registers
  */
-typedef struct _preg{
-	int busy;
-} pregEntry;
+class physFile {
+public:
+	physFile() {}
+	void init(uint64_t size){
+		pregSize = size;
+		pregFile = (pregEntry*) calloc(size,sizeof(pregEntry));
+		numFree = (int)size;
+	}
 
-typedef struct _robEntry{
-	int occupied;
-	int32_t busy;
-	int32_t areg;
-	int32_t prevPreg;
-	int32_t preg;
-	uint32_t instruction_address;
-} robEntry;
+	int fill_first_preg(){
+		for(int i=0; i<(int)pregSize; i++){
+			if(pregFile[i].occupied == 0){
+				pregFile[i].occupied = 1;
+				pregFile[i].ready = 0;
+				numFree -= 1;
+				return i;
+			}
+		}
+		return -1;
+	}
 
-typedef struct _schedEntry{
-	int32_t busy;
-	uint32_t instruction_address;
-	int32_t dest_areg;
-	int32_t dest_preg;
-	int32_t src1_preg;
-	int32_t src2_preg;
-} schedEntry;
+	void clear_preg(int index){
+		pregFile[index].occupied = 0;
+		pregFile[index].ready = 0;
+		numFree += 1;
+	}
+
+	void clear(){
+		free(pregFile);
+	}
+	uint64_t pregSize;
+	pregEntry* pregFile;
+	int numFree;
+private:
+};
 
 class state_update {
 public:
@@ -40,17 +54,16 @@ public:
 	void init(uint64_t size){
 		robSize = size;
 		robEnd = (int) size - 1;
-		rob_ = (robEntry*) calloc(0,sizeof(robEntry) * size);
-		printf("rob created\n");
+		rob_ = (robEntry*) calloc(size,sizeof(robEntry));
 		numFree = (int) size;
 	}
 
-	void update(pregEntry* regFile){
+	void update(physFile& preg){
 		int freeable = -1;
-		while(rob_[robEnd].busy == 0){
+		while((rob_[robEnd].busy == 0) && (rob_[robEnd].occupied == 1)){
 			freeable = this -> shiftForward();
 			if(freeable != -1){
-				regFile[freeable].busy = 0;
+				preg.clear_preg(freeable);
 			}
 			if(rob_[robEnd].occupied == 1){
 				numFree += 1;
@@ -71,7 +84,7 @@ public:
 		return preg_to_free;
 	}
 
-	void addEntry(robEntry * newEntry){
+	void add_entry(robEntry * newEntry){
 		int highestFree = -1;
 		for(int i=0; i<((int)robSize); i++){
 			if(rob_[i].occupied == 0){
@@ -85,6 +98,19 @@ public:
 		numFree -= 1;
 	}
 	
+	void mark_complete(int id){
+		for(int i=0; i<(int)robSize; i++){
+			if(rob_[i].id == id){
+				rob_[i].busy = 0;
+			}
+		}
+	}
+
+	void clear(){
+		free(rob_);
+		//rob_ = NULL;
+	}
+
 	robEntry* rob_;
 	uint64_t robSize;
 	int robEnd;
@@ -97,48 +123,105 @@ public:
 	scheduler_() {}
 	void init(uint64_t size){
 		schedSize = size;
-		schedQ = (schedEntry*) calloc(0,sizeof(schedEntry) * size);
-		printf("scheduling queue created\n");
+		schedQ = (schedEntry*) calloc(size,sizeof(schedEntry));
+		numFree = (int)size;
 	}
+
+	bool add_entry(schedEntry * newEntry){
+		for(int i=0; i<(int)schedSize; i++){
+			if(schedQ[i].occupied == 0){
+				schedQ[i] = *newEntry;
+				//printf("schedQ entries: ");
+				//for(int j=0;j<(int)schedSize;j++){
+				//	printf("%d ",schedQ[j].occupied);
+				//}
+				//printf("\n");
+				numFree -= 1;
+				return true;
+			}
+		}
+		return false;
+	}
+
+	void complete_instructions(state_update& SU){
+		for(int i=0; i<(int)schedSize; i++){
+			uint32_t num;
+			if((schedQ[i].occupied == 1) && (schedQ[i].marked_to_fire == 1)){
+				schedQ[i].occupied = 0;
+				schedQ[i].marked_to_fire = 0;
+				num = schedQ[i].id;
+				SU.mark_complete(num);
+				numFree += 1;
+			}
+		}
+	}
+
+	void mark_to_execute(){
+
+	}
+
+	void clear(){
+		free(schedQ);
+	}
+
+	int numFree;
 	uint64_t schedSize;
 	schedEntry* schedQ;
 private:
 };
 
-class physFile {
-public:
-	physFile() {}
-	void init(uint64_t size){
-		pregSize = size;
-		pregFile = (pregEntry*) calloc(0,sizeof(pregEntry) * size);
-		printf("preg file created\n");
-	}
-	uint64_t pregSize;
-	pregEntry* pregFile;
-private:
-};
+
+
+//class execute{
+//public:
+//	execute(){}
+//	void init(uint64_t k0, uint64_t k1, uint64_t k2){
+//		uint64_t k[3];
+//		k[0]=k0; k[1]=k1; k[2]=k2;
+//		fus = (function_unit**) calloc(0,3*sizeof(function_unit*));
+//		for(int i=0; i<3; i++){
+//			fus[i] = (function_unit*) calloc(0,k[i]*sizeof(function_unit));
+//		}
+//	}
+//	function_unit ** fus;
+//private:
+//};
 
 //std::vector<robEntry> rob;
-state_update rob;
+state_update SU;
 const int numAregs = 32;
-int rat[numAregs];
+int32_t rat[numAregs];
 pregEntry* pregFile;
 //robEntry* rob;
 uint64_t numk0, numk1, numk2, numPreg, dispRate, robSize, schedSize;
 
 scheduler_ scheduler;
 physFile pregs;
+//dispatcher disp;
+//execute ex;
+int instNum = 0;
+int clock = 0;
 
 void setup_proc(uint64_t k0, uint64_t k1, uint64_t k2, uint64_t f, uint64_t rob_, uint64_t preg) 
 {
-	numk0 = k0; numk1 = k1; numk2 = k2; dispRate = f; robSize = rob_; numPreg = preg;
+	numk0 = k0; numk1 = k1; numk2 = k2; 
+	dispRate = f; robSize = rob_; numPreg = preg;
 	schedSize = 2*k0 + k1 + k2;
 	//pregFile = (pregEntry*) calloc(0,sizeof(pregEntry) * numPreg);
 	///rob = (robEntry*) calloc(0,sizeof(robEntry) * robSize);
 	//rob.reserve(robSize);
-	rob.init(robSize);
+	//printf("0");
+	SU.init(robSize);
+	//printf("1");
 	scheduler.init(schedSize);
+	//printf("2");
 	pregs.init(numPreg);
+	//printf("3");
+	for(int i=0;i<numAregs;i++){
+		rat[i]=-1;
+	}
+	//ex.init(k0,k1,k2);
+	//disp.init(dispRate);
 	//printf("%d",sizeof(scheduler));
 	//printf("%d,%d\n",sched[0].dest_areg,sched[0].dest_preg);
 }
@@ -151,24 +234,70 @@ void setup_proc(uint64_t k0, uint64_t k1, uint64_t k2, uint64_t f, uint64_t rob_
  * @p_stats Pointer to the statistics structure
  */
 proc_inst_t instruction;
-robEntry newentry;
-void run_proc(proc_stats_t* p_stats){
+robEntry newrob;
+schedEntry newsched;
+int notFinalInst = 1;
 
-	while(read_instruction(&instruction)){
-		rob.addEntry(&newentry);
+void dispatch(){
+	int num_to_dispatch = (int)dispRate;
+	if(SU.numFree < num_to_dispatch){
+		num_to_dispatch = SU.numFree;
+		//printf("%d ",SU.numFree);
+	}
+	if(scheduler.numFree < num_to_dispatch){
+		num_to_dispatch = scheduler.numFree;
+		//printf("%d ",scheduler.numFree);
+	}
+	if(pregs.numFree < num_to_dispatch){
+		num_to_dispatch = pregs.numFree;
+		//printf("%d\n",pregs.numFree);
+	}
+	int i=0;
+	//printf("xd");
+	while((i < num_to_dispatch) && (notFinalInst = read_instruction(&instruction))){
+		printf("%d ",SU.numFree);printf("%d ",scheduler.numFree);printf("%d\n",pregs.numFree);
+		printf("%d\n",num_to_dispatch);
+		//printf("%d",notFinalInst);
+		i++;
+		instNum++;
+		//SU.addEntry(&newentry);
 		int32_t opcode = instruction.op_code;
 		if(opcode == -1){
 			opcode = 1;
 		}
-		uint32_t address = instruction.instruction_address;
+		//uint32_t address = instruction.instruction_address;
 		int32_t src1 = instruction.src_reg[0];
 		int32_t src2 = instruction.src_reg[1];
 		int32_t dest = instruction.dest_reg;
 		//printf("%d\n", opcode);
-		rob.update(pregs.pregFile);
+		int32_t preg1 = rat[src1];
+		int32_t preg2 = rat[src2];
+		int32_t prev = rat[dest];
+		int32_t preg = -1;
+		if(dest > 0){
+			preg = pregs.fill_first_preg();
+			rat[dest] = preg;
+		}
+		newrob = {.occupied = 1, .busy = 1, .areg = dest, .prevPreg = prev, .preg = preg, .id = instNum};
+		newsched = {.occupied = 1, .marked_to_fire = 0, .id = instNum, .dest_areg = dest, .dest_preg = preg, .src1_preg = preg1, .src2_preg = preg2, .FU=opcode};
+	
+		SU.add_entry(&newrob);
+		scheduler.add_entry(&newsched);
+		printf("%d\n",instNum);
+	}
 
+}
+
+void run_proc(proc_stats_t* p_stats){
+	while((notFinalInst == 1) || (SU.numFree < (int)robSize)){
+		clock++;
+		SU.update(pregs);
+		scheduler.complete_instructions(SU);
+		scheduler.mark_to_execute();
+		dispatch();
 	}
 }
+
 
 /**
  * Subroutine for cleaning up any outstanding instructions and calculating overall statistics
@@ -179,5 +308,7 @@ void run_proc(proc_stats_t* p_stats){
  */
 void complete_proc(proc_stats_t *p_stats) 
 {
-
+	SU.clear();
+	scheduler.clear();
+	pregs.clear();
 }

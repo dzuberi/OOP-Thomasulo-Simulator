@@ -122,7 +122,7 @@ int main(int argc, char* argv[]) {
 void print_statistics(proc_stats_t* p_stats) {
     printf("Processor stats:\n");
 	printf("Total instructions: %lu\n", p_stats->retired_instruction);
-        printf("Avg inst fired per cycle: %f\n", p_stats->avg_inst_fired);
+    printf("Avg inst fired per cycle: %f\n", p_stats->avg_inst_fired);
 	printf("Avg inst retired per cycle: %f\n", p_stats->avg_inst_retired);
 	printf("Total run time (cycles): %lu\n", p_stats->cycle_count);
 }
