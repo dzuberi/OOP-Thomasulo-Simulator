@@ -121,10 +121,11 @@ private:
 class scheduler_ {
 public:
 	scheduler_() {}
-	void init(uint64_t size){
+	void init(uint64_t size, uint64_t k0, uint64_t k1, uint64_t k2){
 		schedSize = size;
 		schedQ = (schedEntry*) calloc(size,sizeof(schedEntry));
 		numFree = (int)size;
+		k_avail[0]=(int)k0; k_avail[1]=(int)k1; k_avail[3]=(int)k2;
 	}
 
 	bool add_entry(schedEntry * newEntry){
@@ -167,6 +168,7 @@ public:
 	int numFree;
 	uint64_t schedSize;
 	schedEntry* schedQ;
+	int k_avail[3];
 private:
 };
 
@@ -213,7 +215,7 @@ void setup_proc(uint64_t k0, uint64_t k1, uint64_t k2, uint64_t f, uint64_t rob_
 	//printf("0");
 	SU.init(robSize);
 	//printf("1");
-	scheduler.init(schedSize);
+	scheduler.init(schedSize,k0,k1,k2);
 	//printf("2");
 	pregs.init(numPreg);
 	//printf("3");
@@ -255,8 +257,8 @@ void dispatch(){
 	int i=0;
 	//printf("xd");
 	while((i < num_to_dispatch) && (notFinalInst = read_instruction(&instruction))){
-		printf("%d ",SU.numFree);printf("%d ",scheduler.numFree);printf("%d\n",pregs.numFree);
-		printf("%d\n",num_to_dispatch);
+		//printf("%d ",SU.numFree);printf("%d ",scheduler.numFree);printf("%d\n",pregs.numFree);
+		//printf("%d\n",num_to_dispatch);
 		//printf("%d",notFinalInst);
 		i++;
 		instNum++;
@@ -283,7 +285,7 @@ void dispatch(){
 	
 		SU.add_entry(&newrob);
 		scheduler.add_entry(&newsched);
-		printf("%d\n",instNum);
+		//printf("%d\n",instNum);
 	}
 
 }
