@@ -13,6 +13,7 @@
  * @rob Number of ROB entries
  * @preg Number of physical registers
  */
+
 class physFile {
 public:
 	physFile() {}
@@ -165,7 +166,26 @@ public:
 		return false;
 	}
 
+	void remove(int id){
+
+	}
+
+	void sort_by_id(){
+		int i,j;
+		schedEntry temp;
+		for(i=0;i<((int)schedSize - 1);i++){
+			for(j=0;j<((int)schedSize - i - 1);j++){
+				if(schedQ[j].id > schedQ[j+1].id){
+					temp = schedQ[j];
+					schedQ[j]=schedQ[j+1];
+					schedQ[j+1]=temp;
+				}
+			}
+		}
+	}
+
 	void complete_instructions(state_update& SU, physFile& preg){
+		this -> sort_by_id();
 		for(int32_t unit=0;unit<3;unit++){
 			for(int i=0; i<(int)schedSize; i++){
 				if((schedQ[i].occupied == 1) && (schedQ[i].marked_to_fire == 1) && (schedQ[i].FU==unit)){
