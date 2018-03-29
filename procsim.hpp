@@ -62,12 +62,30 @@ typedef struct _schedEntry{
 	int32_t src1_preg;
 	int32_t src2_preg;
 	int32_t FU;
+	int completed;
 } schedEntry;
 
 //typedef struct _function_unit{
 //	int32_t free;
 //	uint32_t instruction_address;
 //} function_unit;
+class state_update;
+class physFile;
 
+class scheduler_ {
+public:
+	scheduler_();
+	void init(uint64_t size, uint64_t k0, uint64_t k1, uint64_t k2);
+	bool add_entry(schedEntry * newEntry);
+	void remove(int id);
+	void sort_by_id();
+	void complete_instructions(state_update& SU, physFile& preg);
+	void mark_to_execute(physFile& preg);
+	void clear();
+	int numFree;
+	uint64_t schedSize;
+	schedEntry* schedQ;
+	int k_avail[3];
+};
 
 #endif /* PROCSIM_HPP */

@@ -71,12 +71,11 @@ public:
 		numFree = (int) size;
 	}
 
-	void update(physFile& preg){
+	void update(physFile& preg, scheduler_& scheduler){
 		int freeable = -1;
 		while((rob_[robEnd].busy == 0) && (rob_[robEnd].occupied == 1)){
-			if(rob_[robEnd].occupied == 1){
-				numFree += 1;
-			}
+			scheduler.remove(rob_[robEnd].id);
+			numFree += 1;
 			printf("RU Inst: %d \n",rob_[robEnd].id);
 			freeable = this -> shiftForward();
 			if(freeable != -1){
@@ -140,120 +139,116 @@ public:
 private:
 };
 
-class scheduler_ {
-public:
-	scheduler_() {}
-	void init(uint64_t size, uint64_t k0, uint64_t k1, uint64_t k2){
-		schedSize = size;
-		schedQ = (schedEntry*) calloc(size,sizeof(schedEntry));
-		numFree = (int)size;
-		k_avail[0]=(int)k0; k_avail[1]=(int)k1; k_avail[2]=(int)k2;
-	}
 
-	bool add_entry(schedEntry * newEntry){
+scheduler_::scheduler_() {}
+void scheduler_::init(uint64_t size, uint64_t k0, uint64_t k1, uint64_t k2){
+	schedSize = size;
+	schedQ = (schedEntry*) calloc(size,sizeof(schedEntry));
+	numFree = (int)size;
+	k_avail[0]=(int)k0; k_avail[1]=(int)k1; k_avail[2]=(int)k2;
+}
+
+bool scheduler_::add_entry(schedEntry * newEntry){
+	for(int i=0; i<(int)schedSize; i++){
+		if(schedQ[i].occupied == 0){
+			schedQ[i] = *newEntry;
+			//printf("schedQ entries: ");
+			for(int j=0;j<(int)schedSize;j++){
+				//printf("%d/%d/%d/%d ",schedQ[j].id,schedQ[j].FU,schedQ[j].occupied,schedQ[j].marked_to_fire);
+			}
+			//printf("\n");
+			numFree -= 1;
+			return true;
+		}
+	}
+	return false;
+}
+
+void scheduler_::remove(int id){
+	for(int i=0; i<(int)schedSize; i++){
+		if((schedQ[i].id == id)&&(schedQ[i].completed == 1)){
+			schedQ[i].occupied = 0;
+		}
+	}
+}
+
+void scheduler_::sort_by_id(){
+	int i,j;
+	schedEntry temp;
+	for(i=0;i<((int)schedSize - 1);i++){
+		for(j=0;j<((int)schedSize - i - 1);j++){
+			if(schedQ[j].id > schedQ[j+1].id){
+				temp = schedQ[j];
+				schedQ[j]=schedQ[j+1];
+				schedQ[j+1]=temp;
+			}
+		}
+	}
+}
+
+void scheduler_::complete_instructions(state_update& SU, physFile& preg){
+	this -> sort_by_id();
+	for(int32_t unit=0;unit<3;unit++){
 		for(int i=0; i<(int)schedSize; i++){
-			if(schedQ[i].occupied == 0){
-				schedQ[i] = *newEntry;
-				//printf("schedQ entries: ");
-				for(int j=0;j<(int)schedSize;j++){
-					//printf("%d/%d/%d/%d ",schedQ[j].id,schedQ[j].FU,schedQ[j].occupied,schedQ[j].marked_to_fire);
+			if((schedQ[i].occupied == 1) && (schedQ[i].marked_to_fire == 1) && (schedQ[i].FU==unit)){
+				schedQ[i].completed = 1;
+				schedQ[i].marked_to_fire = 0;
+				if(schedQ[i].dest_preg > -1){
+					preg.ready_preg(schedQ[i].dest_preg);
 				}
-				//printf("\n");
-				numFree -= 1;
-				return true;
-			}
-		}
-		return false;
-	}
-
-	void remove(int id){
-
-	}
-
-	void sort_by_id(){
-		int i,j;
-		schedEntry temp;
-		for(i=0;i<((int)schedSize - 1);i++){
-			for(j=0;j<((int)schedSize - i - 1);j++){
-				if(schedQ[j].id > schedQ[j+1].id){
-					temp = schedQ[j];
-					schedQ[j]=schedQ[j+1];
-					schedQ[j+1]=temp;
-				}
+				SU.mark_complete(schedQ[i].id);
+				numFree += 1;
+				printf("EX : Type: %d Inst_num: %d\n",schedQ[i].FU,schedQ[i].id);
+				//printf("inst %d marked completed\n",schedQ[i].id);
 			}
 		}
 	}
+}
 
-	void complete_instructions(state_update& SU, physFile& preg){
-		this -> sort_by_id();
-		for(int32_t unit=0;unit<3;unit++){
+void scheduler_::mark_to_execute(physFile& preg){
+	for(int32_t unit=0; unit<3; unit++){
+		int unitsFilled = 0;
+		int notFilled = 0;
+		while((unitsFilled < k_avail[unit]) && (notFilled == 0)){
+			int lowID = INT_MAX;
+			//int oldUnitsFilled = 0;
+			int index_to_ex = -1;
 			for(int i=0; i<(int)schedSize; i++){
-				if((schedQ[i].occupied == 1) && (schedQ[i].marked_to_fire == 1) && (schedQ[i].FU==unit)){
-					schedQ[i].occupied = 0;
-					schedQ[i].marked_to_fire = 0;
-					if(schedQ[i].dest_preg > -1){
-						preg.ready_preg(schedQ[i].dest_preg);
-					}
-					SU.mark_complete(schedQ[i].id);
-					numFree += 1;
-					printf("EX : Type: %d Inst_num: %d\n",schedQ[i].FU,schedQ[i].id);
-					//printf("inst %d marked completed\n",schedQ[i].id);
-				}
-			}
-		}
-	}
-
-	void mark_to_execute(physFile& preg){
-		for(int32_t unit=0; unit<3; unit++){
-			int unitsFilled = 0;
-			int notFilled = 0;
-			while((unitsFilled < k_avail[unit]) && (notFilled == 0)){
-				int lowID = INT_MAX;
-				//int oldUnitsFilled = 0;
-				int index_to_ex = -1;
-				for(int i=0; i<(int)schedSize; i++){
-					if((schedQ[i].FU == unit) && (schedQ[i].occupied == 1) && (schedQ[i].marked_to_fire == 0)){
-						if((preg.isReady(schedQ[i].src1_preg) && preg.isReady(schedQ[i].src2_preg))){	
-							if(schedQ[i].id < lowID){
-								lowID = schedQ[i].id;
-								index_to_ex = i;
-								////printf("k%d op detected",schedQ[i].FU);
-							}
+				if((schedQ[i].completed == 0) && (schedQ[i].FU == unit) && (schedQ[i].occupied == 1) && (schedQ[i].marked_to_fire == 0)){
+					if((preg.isReady(schedQ[i].src1_preg) && preg.isReady(schedQ[i].src2_preg))){	
+						if(schedQ[i].id < lowID){
+							lowID = schedQ[i].id;
+							index_to_ex = i;
+							////printf("k%d op detected",schedQ[i].FU);
 						}
 					}
-					//if(i == ((int)schedSize - 1)){
-					//	if(oldUnitsFilled == unitsFilled){
-					//		notFilled = 1;
-					//	}
-					//	else{
-					//		oldUnitsFilled = unitsFilled;
-					//	}
-					//}
 				}
-				////printf("checking k%d",unit);
-				if(index_to_ex > -1){
-					schedQ[index_to_ex].marked_to_fire = 1;
-					unitsFilled++;
-					printf("SCHED Inst Num: %d \n",schedQ[index_to_ex].id);
-				}
-				else{
-					notFilled = 1;
-				}
+				//if(i == ((int)schedSize - 1)){
+				//	if(oldUnitsFilled == unitsFilled){
+				//		notFilled = 1;
+				//	}
+				//	else{
+				//		oldUnitsFilled = unitsFilled;
+				//	}
+				//}
 			}
-			////printf("%d k%d units filled\n",unitsFilled,unit);
+			////printf("checking k%d",unit);
+			if(index_to_ex > -1){
+				schedQ[index_to_ex].marked_to_fire = 1;
+				unitsFilled++;
+				printf("SCHED Inst Num: %d \n",schedQ[index_to_ex].id);
+			}
+			else{
+				notFilled = 1;
+			}
 		}
+		////printf("%d k%d units filled\n",unitsFilled,unit);
 	}
+}
 
-	void clear(){
-		free(schedQ);
-	}
-
-	int numFree;
-	uint64_t schedSize;
-	schedEntry* schedQ;
-	int k_avail[3];
-private:
-};
+void scheduler_::clear(){
+	free(schedQ);
+}
 
 
 
@@ -333,14 +328,15 @@ void dispatch(){
 		num_to_dispatch = scheduler.numFree;
 		////printf("%d ",scheduler.numFree);
 	}
-	if(pregs.numFree < num_to_dispatch){
-		num_to_dispatch = pregs.numFree;
-		////printf("%d\n",pregs.numFree);
-	}
 	int i=0;
 	////printf("xd");
-	while((i < num_to_dispatch) && (notFinalInst = read_instruction(&instruction))){
-		////printf("%d ",SU.numFree);//printf("%d ",scheduler.numFree);//printf("%d\n",pregs.numFree);
+	while((i < num_to_dispatch) && (pregs.numFree > 0)){
+
+		if(!(notFinalInst = read_instruction(&instruction))){
+			break;
+		}
+
+		//printf("%d ",SU.numFree);printf("%d ",scheduler.numFree);printf("%d\n",pregs.numFree);
 		////printf("%d\n",num_to_dispatch);
 		////printf("%d",notFinalInst);
 		i++;
@@ -371,12 +367,14 @@ void dispatch(){
 		}
 		else prev = -1;
 		int32_t preg = -1;
+		//printf("dest %d\n", dest);
 		if(dest > -1){
 			preg = pregs.fill_first_preg();
 			rat[dest] = preg;
 		}
+		//else printf("no pregs assigned\n");
 		newrob = {.occupied = 1, .busy = 1, .areg = dest, .prevPreg = prev, .preg = preg, .id = instNum};
-		newsched = {.occupied = 1, .marked_to_fire = 0, .id = instNum, .dest_areg = dest, .dest_preg = preg, .src1_preg = preg1, .src2_preg = preg2, .FU=opcode};
+		newsched = {.occupied = 1, .marked_to_fire = 0, .id = instNum, .dest_areg = dest, .dest_preg = preg, .src1_preg = preg1, .src2_preg = preg2, .FU=opcode, .completed = 0};
 		
 		//if(dest == -1){
 		//	newrob.busy = 0;
@@ -385,6 +383,7 @@ void dispatch(){
 		SU.add_entry(&newrob);
 		scheduler.add_entry(&newsched);
 		printf("DU: Inst Num %d \n",instNum);
+		//printf("%d\n",pregs.numFree);
 	}
 
 }
@@ -397,7 +396,7 @@ void run_proc(proc_stats_t* p_stats){
 		
 		//printf("cycle num %d\n",clock);
 		////printf("1");
-		SU.update(pregs);
+		SU.update(pregs,scheduler);
 		////printf("2");
 		scheduler.complete_instructions(SU, pregs);
 		////printf("3");
@@ -422,4 +421,7 @@ void complete_proc(proc_stats_t *p_stats)
 	scheduler.clear();
 	pregs.clear();
 	p_stats -> cycle_count = clock;
+	p_stats -> retired_instruction = instNum;
+	p_stats -> avg_inst_fired = ((float)instNum)/((float)clock);
+	p_stats -> avg_inst_retired = ((float)instNum)/((float)clock);
 }
