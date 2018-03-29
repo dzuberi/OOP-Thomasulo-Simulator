@@ -1,0 +1,19 @@
+gcc
+
+f4 j3
+r12
+
+mcf
+
+f3 j2
+r5
+
+gobmk
+
+f3 j2
+r8
+
+hmmer
+
+f4 j3
+r11
