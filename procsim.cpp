@@ -76,23 +76,27 @@ public:
 		while((rob_[robEnd].busy == 0) && (rob_[robEnd].occupied == 1)){
 			scheduler.remove(rob_[robEnd].id);
 			numFree += 1;
-			printf("RU Inst: %d \n",rob_[robEnd].id);
+			// UNCOMMENT FOR DEBUG
+			//printf("RU Inst: %d \n",rob_[robEnd].id);
 			freeable = this -> shiftForward();
 			if(freeable != -1){
 				preg.clear_preg(freeable);
 			}
 		}
-		//printf("rob entries: ");
+		// print rob contents
+		/*
+		printf("rob entries: ");
 		for(int j=0;j<(int)robSize;j++){
-			//printf("%d/%d/%d ",rob_[j].id,rob_[j].occupied,rob_[j].busy);
+			printf("%d/%d/%d ",rob_[j].id,rob_[j].occupied,rob_[j].busy);
 		}
-		//printf("\n");
-		//printf("rob free:%d\n",numFree);
+		printf("\n");
+		printf("rob free:%d\n",numFree);
+		*/
 	}
 
 	int shiftForward(){
 		int preg_to_free = -1;
-		if((rob_[robEnd].prevPreg != rob_[robEnd].preg) && (rob_[robEnd].busy == 0) && (rob_[robEnd].occupied == 1)){
+		if((rob_[robEnd].busy == 0) && (rob_[robEnd].occupied == 1)){
 			preg_to_free = rob_[robEnd].prevPreg;
 		}
 		for(int i=robEnd; i>0; i--){
@@ -153,9 +157,9 @@ bool scheduler_::add_entry(schedEntry * newEntry){
 		if(schedQ[i].occupied == 0){
 			schedQ[i] = *newEntry;
 			//printf("schedQ entries: ");
-			for(int j=0;j<(int)schedSize;j++){
+			//for(int j=0;j<(int)schedSize;j++){
 				//printf("%d/%d/%d/%d ",schedQ[j].id,schedQ[j].FU,schedQ[j].occupied,schedQ[j].marked_to_fire);
-			}
+			//}
 			//printf("\n");
 			numFree -= 1;
 			return true;
@@ -166,8 +170,9 @@ bool scheduler_::add_entry(schedEntry * newEntry){
 
 void scheduler_::remove(int id){
 	for(int i=0; i<(int)schedSize; i++){
-		if((schedQ[i].id == id)&&(schedQ[i].completed == 1)){
+		if((schedQ[i].id == id)){
 			schedQ[i].occupied = 0;
+			numFree += 1;
 		}
 	}
 }
@@ -190,19 +195,30 @@ void scheduler_::complete_instructions(state_update& SU, physFile& preg){
 	this -> sort_by_id();
 	for(int32_t unit=0;unit<3;unit++){
 		for(int i=0; i<(int)schedSize; i++){
-			if((schedQ[i].occupied == 1) && (schedQ[i].marked_to_fire == 1) && (schedQ[i].FU==unit)){
+			if((schedQ[i].occupied == 1) && (schedQ[i].marked_to_fire == 1) && (schedQ[i].FU==unit))
+			{
 				schedQ[i].completed = 1;
 				schedQ[i].marked_to_fire = 0;
 				if(schedQ[i].dest_preg > -1){
 					preg.ready_preg(schedQ[i].dest_preg);
 				}
 				SU.mark_complete(schedQ[i].id);
-				numFree += 1;
-				printf("EX : Type: %d Inst_num: %d\n",schedQ[i].FU,schedQ[i].id);
+				//numFree += 1;
+				// UNCOMMENT FOR DEBUG
+				//printf("EX : Type: %d Inst_num: %d\n",schedQ[i].FU,schedQ[i].id);
 				//printf("inst %d marked completed\n",schedQ[i].id);
 			}
 		}
 	}
+	//print schedQ contents
+	/*
+	printf("schedQ entries: ");
+	for(int j=0;j<(int)schedSize;j++){
+	printf("%d/%d/%d/%d ",schedQ[j].id,schedQ[j].FU,schedQ[j].occupied,schedQ[j].marked_to_fire);
+	}
+	printf("\n%d",numFree);
+	printf("\n");
+	*/
 }
 
 void scheduler_::mark_to_execute(physFile& preg){
@@ -236,7 +252,8 @@ void scheduler_::mark_to_execute(physFile& preg){
 			if(index_to_ex > -1){
 				schedQ[index_to_ex].marked_to_fire = 1;
 				unitsFilled++;
-				printf("SCHED Inst Num: %d \n",schedQ[index_to_ex].id);
+				// UNCOMMENT FOR DEBUG
+				//printf("SCHED Inst Num: %d \n",schedQ[index_to_ex].id);
 			}
 			else{
 				notFilled = 1;
@@ -382,7 +399,8 @@ void dispatch(){
 
 		SU.add_entry(&newrob);
 		scheduler.add_entry(&newsched);
-		printf("DU: Inst Num %d \n",instNum);
+		// UNCOMMENT FOR DEBUG
+		//printf("DU: Inst Num %d \n",instNum);
 		//printf("%d\n",pregs.numFree);
 	}
 
@@ -392,7 +410,8 @@ void run_proc(proc_stats_t* p_stats){
 	while((notFinalInst == 1) || (SU.numFree < (int)robSize)){
 		////printf("rob free:%d\n",SU.numFree);
 		clock++;
-		printf("------------------------------------------  Cycle %d 		 ---------------------------------\n",clock);
+		// UNCOMMENT FOR DEBUG
+		//printf("------------------------------------------  Cycle %d 		 ---------------------------------\n",clock);
 		
 		//printf("cycle num %d\n",clock);
 		////printf("1");
@@ -403,7 +422,8 @@ void run_proc(proc_stats_t* p_stats){
 		scheduler.mark_to_execute(pregs);
 		////printf("4");
 		dispatch();
-		printf("---------------------------------------------------------------------------------------------------\n\n");
+		// UNCOMMENT FOR DEBUG
+		//printf("---------------------------------------------------------------------------------------------------\n\n");
 	}
 }
 
