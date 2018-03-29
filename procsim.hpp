@@ -34,17 +34,16 @@ typedef struct _proc_stats_t
 } proc_stats_t;
 
 bool read_instruction(proc_inst_t* p_inst);
-
 void setup_proc(uint64_t k0, uint64_t k1, uint64_t k2, uint64_t f, uint64_t rob, uint64_t preg);
 void run_proc(proc_stats_t* p_stats);
 void complete_proc(proc_stats_t* p_stats);
 
-typedef struct _preg{
+typedef struct _preg{ //preg struct
 	int ready;
 	int occupied;
 } pregEntry;
 
-typedef struct _robEntry{
+typedef struct _robEntry{ //ROB entry struct
 	int occupied;
 	int busy;
 	int32_t areg;
@@ -53,7 +52,7 @@ typedef struct _robEntry{
 	int id;
 } robEntry;
 
-typedef struct _schedEntry{
+typedef struct _schedEntry{ //scheduling queue entry struct
 	int occupied;
 	int32_t marked_to_fire;
 	int id;
@@ -65,14 +64,10 @@ typedef struct _schedEntry{
 	int completed;
 } schedEntry;
 
-//typedef struct _function_unit{
-//	int32_t free;
-//	uint32_t instruction_address;
-//} function_unit;
-class state_update;
+class state_update; //forward declarations for the scheduler
 class physFile;
 
-class scheduler_ {
+class scheduler_ { //forward declaration of the scheduler class so it can be used as an input to a state_update method
 public:
 	scheduler_();
 	void init(uint64_t size, uint64_t k0, uint64_t k1, uint64_t k2);
