@@ -1,36 +1,44 @@
 gcc :
+default settings:
+f:  4 k0: 3 k1: 2 k3: 1 rob: 12 pregs: 32
 default: 2.933067 threshold: 2.87440566
 experiment 1
-f:  4 k0: 3 k1: 2 k3: 1 rob: 12
+f:  4 k0: 3 k1: 2 k3: 1 rob: 12 pregs: 32
 ipc: 2.933067
 experiment 2
-rob:  12
+f:  4 k0: 3 k1: 2 k3: 1 rob:  12 pregs: 32
 ipc: 2.933067 
 
 hmmer :
+default settings:
+f:  4 k0: 3 k1: 2 k3: 1 rob: 12 pregs: 32
 default: 2.756263 threshold: 2.70113774
 experiment 1
-f:  3 k0: 2 k1: 2 k3: 2 rob: 12
+f:  3 k0: 2 k1: 2 k3: 2 rob: 12 pregs: 32
 ipc: 2.725464
 experiment 2
-rob:  11
+f:  4 k0: 3 k1: 2 k3: 1 rob:  11 pregs: 32
 ipc: 2.720792 
 
 gobmk :
+default settings:
+f:  4 k0: 3 k1: 2 k3: 1 rob: 12 pregs: 32
 default: 1.600487 threshold: 1.56847726
 experiment 1
-f:  3 k0: 2 k1: 2 k3: 1 rob: 10
+f:  3 k0: 2 k1: 2 k3: 1 rob: 10 pregs: 32
 ipc: 1.569243
 experiment 2
-rob:  8
+f:  4 k0: 3 k1: 2 k3: 1 rob:  8 pregs: 32
 ipc: 1.573787 
 
 mcf :
+default settings:
+f:  4 k0: 3 k1: 2 k3: 1 rob: 12 pregs: 32
 default: 0.590898 threshold: 0.57908004
 experiment 1
-f:  3 k0: 2 k1: 2 k3: 1 rob: 10
+f:  3 k0: 2 k1: 2 k3: 1 rob: 10 pregs: 32
 ipc: 0.580511
 experiment 2
-rob:  5
+f:  4 k0: 3 k1: 2 k3: 1 rob:  5 pregs: 32
 ipc: 0.57971 
 

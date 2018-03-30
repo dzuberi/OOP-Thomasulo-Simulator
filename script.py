@@ -22,7 +22,8 @@ for tracename in traces:
 	k=2
 	l=1
 	p=32
-
+	print tracename,":"
+	print"default settings:\n","f: ",f,"k0:",j,"k1:",k,"k3:",l,"rob:",r,"pregs:",p
 
 	#print type(tracename)
 	s = commands.getstatusoutput("./procsim -r"+str(r)+" -f"+str(f)+" -j"+str(j)+" -k"+str(k)+" -l"+str(l)+" -p"+str(p)+" < traces/"+tracename+".100k.trace ")
@@ -60,10 +61,15 @@ for tracename in traces:
 							sum = newsum
 							#print minf,minj,mink,minl,newsum
 
-	print tracename,":"
 	rob = 2*(minj+mink+minl)
+	r=12
+	f=4
+	j=3
+	k=2
+	l=1
+	p=32
 	print "default:",default,"threshold:",threshold
-	print "experiment 1\n","f: ",minf,"k0:",minj,"k1:",mink,"k3:",minl,"rob:",rob
+	print "experiment 1\n","f: ",minf,"k0:",minj,"k1:",mink,"k3:",minl,"rob:",rob,"pregs:",p
 	print "ipc:",ipc1
-	print "experiment 2\n","rob: ",minr
+	print "experiment 2\n","f: ",f,"k0:",j,"k1:",k,"k3:",l,"rob: ",minr,"pregs:",p
 	print "ipc:",ipc2,"\n"
