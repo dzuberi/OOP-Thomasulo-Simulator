@@ -30,9 +30,11 @@ for tracename in traces:
 	default = getIPC(s)
 	threshold = 0.98*default
 	minr = 12
+	ipc2 = default
 	for r in range(1,13):
 		ipc = getIPC(commands.getstatusoutput("./procsim -r"+str(r)+" -f"+str(f)+" -j"+str(j)+" -k"+str(k)+" -l"+str(l)+" -p"+str(p)+" < traces/"+tracename+".100k.trace "))
 		if (ipc > threshold):
+			ipc2 = ipc
 			minr = r
 			break
 	sum = f+j+k+l
@@ -41,21 +43,27 @@ for tracename in traces:
 	minj = j
 	mink = k
 	minl = l
+	ipc1 = default
 	for f in range(1,5):
-		for j in range(1,4):
-			for k in range(1,3):
-				ipc = getIPC(commands.getstatusoutput("./procsim -r"+str(r)+" -f"+str(f)+" -j"+str(j)+" -k"+str(k)+" -l"+str(l)+" -p"+str(p)+" < traces/"+tracename+".100k.trace "))
-				if(ipc > threshold):
-					newsum = f+j+k+l
-					if(newsum < sum):
-						minf = f
-						minj = j
-						mink = k
-						minl = l
-						sum = newsum
-						#print minf,minj,mink,minl,newsum
+		for j in range(1,5):
+			for k in range(1,4):
+				for l in range(1,3):
+					ipc = getIPC(commands.getstatusoutput("./procsim -r"+str(r)+" -f"+str(f)+" -j"+str(j)+" -k"+str(k)+" -l"+str(l)+" -p"+str(p)+" < traces/"+tracename+".100k.trace "))
+					if(ipc > threshold):
+						newsum = f+j+k+l
+						if(newsum < sum):
+							ipc1 = ipc
+							minf = f
+							minj = j
+							mink = k
+							minl = l
+							sum = newsum
+							#print minf,minj,mink,minl,newsum
 
 	print tracename,":"
 	rob = 2*(minj+mink+minl)
+	print "default:",default,"threshold:",threshold
 	print "experiment 1\n","f: ",minf,"k0:",minj,"k1:",mink,"k3:",minl,"rob:",rob
-	print "experiment 2\n","rob: ",minr,"\n"
+	print "ipc:",ipc1
+	print "experiment 2\n","rob: ",minr
+	print "ipc:",ipc2,"\n"
