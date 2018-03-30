@@ -1,5 +1,6 @@
 CXXFLAGS := -g -Wall -std=c++0x -lm
 #CXXFLAGS := -g -Wall -lm
+#CXXFLAGS := -g -Wall -std=c++11 -lm
 CXX=g++
 SRC=procsim.cpp procsim_driver.cpp
 PROCSIM=./procsim
